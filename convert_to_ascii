@@ -1,0 +1,126 @@
+import os
+import unicodedata
+from PIL import Image
+
+# Returns list of characters from splitting string
+def split(word):
+    return [char for char in word]
+
+# Resize the image to a smaller size
+def resize(image, new_width, scale):
+    old_width, old_height = image.size
+    new_height = int(scale * new_width * old_height / old_width)
+    return image.resize((new_width, new_height))
+
+# Convert an image to grayscale
+def convert_grayscale(image):
+    return image.convert("L")
+
+# Convert each pixel to ASCII character based on provided set
+def pixel_to_ascii(image, charList, pct_change):
+
+    # Convert image to pixel    
+    pixels = image.getdata()
+    
+    outString = "";
+    for pixel in pixels:
+
+        # Adjust pixel value for new contrast
+        pixel = (1 + pct_change/100) * pixel
+
+        # Bracket in 0 to 255
+        pixel = min(max(pixel, 0), 255)
+
+        # Select character from the char list        
+        index = int(pixel//(255 / len(charList)))
+        outString += charList[index];
+
+    return outString
+
+# Get percent constrast
+def getContrast():
+    pct_str = input("Percent change of contrast (-100 to 100) : \n")
+    pct_change = 0
+    if (pct_str.isnumeric()):
+        pct_change = float(pct_str)
+        if (pct_change > 100 or pct_change < -100):
+            pct_change = 0
+
+    return pct_change
+
+# Get image size (number of lines)
+def getSize():
+    num_lines_str = input("Number of lines (default 150) : \n")
+    num_lines = 150
+    if (num_lines_str.isnumeric()):
+        num_lines = int(num_lines_str)
+        if (num_lines < 0):
+            num_lines = 150
+
+    return num_lines
+                
+################################ Main subroutine ##############################
+def main():
+    # Scale adjustment due to font
+    scale = 0.4
+    
+    # Define the ASCII characters to be used
+    charList = ["@", "#", "$", "%", "?", "*", "+", ";", ":", ",", "."]
+
+    # Get the current working directory
+    directory = os.getcwd()
+    print("Current directory: " + str(directory) + "\n")
+
+    # Show contents of the directory, filter on image types
+    files = os.listdir(os.curdir)
+    print("Files in directory: ")
+    for f in files:
+        if (".jpg" in f): print(f)
+        if (".jpeg" in f): print(f)
+        if (".webp" in f): print(f)
+        if (".png" in f): print(f)
+    print("")
+
+    # Retrieve name of image file from the user (assumes local directory)
+    validFile = False
+    path = input("Enter the path to the image field : \n")
+    complete_path = directory + "\\" + path
+    try:
+        image = Image.open(complete_path)
+        validFile = True
+    except:
+        print("Unable to find image at " + str(complete_path));
+
+    if (validFile == True):
+        # Get contrast
+        pct_change = getContrast()
+
+        # Get image size
+        size = getSize()
+
+        # Resize image
+        image = resize(image, size, scale)
+        img_width = image.width
+
+        # Convert to grayscale
+        gray_image = convert_grayscale(image)
+
+        # Convert to one line of ASCII
+        string_image = pixel_to_ascii(gray_image, charList, pct_change)
+        string_img_len = len(string_image)
+
+        # Insert line breaks into ASCII line to same width as original image
+        wrappedText = ""
+        for i in range(0, string_img_len, img_width):
+            wrappedText += string_image[i:i + img_width] + "\n"
+
+        # Write out ASCII version to file, modify extension to text
+        base_name = path.split(".")
+        new_file_name = base_name[0] + ".txt"
+        with open(new_file_name, "w") as f:
+            f.write(wrappedText)
+
+###########################################################################
+
+# Run the main subroutine
+main()
